@@ -1,0 +1,101 @@
+ * {
+         padding: 0;
+         margin: 0;
+         }
+       body {
+         background-color: #f5f5f5 ;
+       }
+       a {
+         text-decoration: none
+       }
+      .alerts {
+         position:fixed;
+         margin:auto;
+         top: 30%;
+         width:90%;
+         max-width: 580px;
+         padding: 0px 0;
+         right:0;
+         left: 0;
+         transform：translateX(-50%);
+         transform：translateY(-50%);
+         z-index: 999;
+         
+      }
+      .alerts-content{
+        width: 100%;
+        z-index: 9999;
+        background-color: #;
+         border-radius:8px;
+         box-shadow: 0 3px 20px 3px #d6d6d6;
+         background-image: url();
+         background-repeat: no-repeat;
+         background-position: left bottom;
+         background-size: 100%;
+         font-size: 14px;
+      }
+      .ale-text {
+        padding: 15px;
+        color:#eee;
+        font-size: 14px;
+        z-index: 99
+      }
+      .ggs-text{
+        width: 80%;
+        padding: 10px 15px;
+        background-color:rgba(255,255,255,0.2);
+        border-radius: 6px;  
+        margin-top: 8px;      
+      }
+      .alerts-content .bq {
+        text-align: right;
+        margin-top: 8px;
+        padding-top: 4px;
+        border-top: 1px solid rgba(255,255,255,0.2)
+      }
+      .alerts-content .imgs{
+        position: absolute;
+        width: 160px;
+        height: auto;
+        top: -52px;
+        right: 15px;
+      }
+     .alerts .closes {
+        position: absolute;
+        top: -90px;
+        right: 0px;
+        width: 24px;
+        height: 24px;
+        line-height: 24px;
+        text-align: center;
+        border: 2px solid #fff;
+        border-radius: 20px;
+        background-color:#8fc9ff;
+        color: #eee;
+        
+     }
+     .alerts-zd {
+       display: block;
+        position: fixed;
+        top: 0;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        background-color: rgba(0,0,0,0.3);
+        z-index: 998;   
+      }
+     
+@media screen and (min-width: 580px){
+       .alerts-content {
+         font-size: 18px;
+       }
+       .ale-text {
+         font-size: 18px;
+       }
+       .alerts-content .imgs{
+        position: absolute;
+        width: 260px;
+        top: -80px;
+        right: 15px;
+      }
+}
