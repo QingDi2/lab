@@ -1,0 +1,107 @@
+
+<!DOCTYPE html>
+<html lang="zh-cn">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0;"/>
+    <title>音乐厅 | 圆弧派博客</title>
+    <link rel="stylesheet" type="text/css" href="css/APlayer.min.css">
+    <link rel="stylesheet" type="text/css" href="main.css?0">
+    <link rel="icon" href="favicon.ico">
+    <link rel="apple-touch-icon" href="favicon.ico">
+    <meta name="apple-mobile-web-app-title" content="音乐">
+    <meta name="description" content="一个简单好用的音乐播放器。">
+</head>
+<body>
+<div id="music_bg"></div>
+<div id="heoMusic-page">
+</div>
+<script src="js/APlayer.min.js?v9"></script>
+<script src="js/Meting.min.js"></script>
+<script async data-pjax src="js/main.js"></script>
+<header>
+    <h1 align="center" id="header" style='cursor: default'>音乐馆 | 圆弧派博客 <span style="font-size: 14px;">分享我喜欢的音乐</span></h1>
+</header>
+<div class="container" id="search-container">
+    <form id="search-form" onsubmit="submitSearch(event)">
+      <div class="input-container">
+        <input type="text" id="search-input" placeholder="输入网易云歌单ID">
+        <button type="submit">确定</button>
+      </div>
+    </form>
+    <button class="toggle-button" onclick="toggleContainer()">&times;</button>
+  </div>
+  <script>
+    function toggleContainer() {
+      var container = document.getElementById("search-container");
+      container.classList.toggle("closed");
+    }
+
+    function submitSearch(event) {
+      event.preventDefault();
+      var input = document.getElementById("search-input").value;
+      window.location.href = "https://v.iarc.top/music/?id=" + input;
+    }
+  </script>
+  <style>
+    .container {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      padding: 10px;
+      background-color: #fff;
+      border: 1px solid #ddd;
+      border-radius: 5px;
+      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+      z-index: 9999;
+    }
+
+    .container.closed {
+      display: none;
+    }
+
+    .input-container {
+      display: flex;
+    }
+
+    input[type="text"] {
+      flex: 1;
+      padding: 10px;
+      border: 1px solid #ccc;
+      border-radius: 5px 0 0 5px;
+      outline: none;
+    }
+
+    button[type="submit"] {
+      padding: 10px 15px;
+      background-color: #4caf50;
+      border: none;
+      border-radius: 0 5px 5px 0;
+      color: #fff;
+      cursor: pointer;
+    }
+
+    .toggle-button {
+      position: absolute;
+      top: -10px;
+      right: -10px;
+      width: 30px;
+      height: 30px;
+      border-radius: 50%;
+      background-color: #4caf50;
+      color: #fff;
+      border: none;
+      font-size: 16px;
+      cursor: pointer;
+    }
+  </style>
+<footer>
+    <a class="footer1" href="https://www.iarc.top"><p class="footer">Copyright © 2022-2023 By 圆弧派</p></a>&nbsp;&nbsp;
+    <a class="footer1" href="https://github.com/metowolf/Meting"><p class="footer">Player by Meting</p></a>&nbsp;&nbsp;
+    <a href="http://beian.miit.gov.cn/" target="_blank" rel="noopener nofollow"><p class="footer">
+        豫ICP备2022026210号</p></a>&nbsp;&nbsp;
+    <a target="_blank" href="http://www.beian.gov.cn/portal/registerSystemInfo?recordcode=41020202000150"><p class="footer">豫公网安备 41020202000150号</p></a>
+</footer>
+</body>
+</html>
