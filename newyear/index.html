@@ -1,0 +1,674 @@
+<!DOCTYPE html><html lang="zh"><head><meta name="x-poe-datastore-behavior" content="local_only"><meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' 'unsafe-eval' data: blob: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://code.jquery.com https://unpkg.com https://d3js.org https://threejs.org https://cdn.plot.ly https://stackpath.bootstrapcdn.com https://maps.googleapis.com https://cdn.tailwindcss.com https://ajax.googleapis.com https://kit.fontawesome.com https://cdn.datatables.net https://maxcdn.bootstrapcdn.com https://code.highcharts.com https://tako-static-assets-production.s3.amazonaws.com https://www.youtube.com https://fonts.googleapis.com https://fonts.gstatic.com https://pfst.cf2.poecdn.net https://puc.poecdn.net https://i.imgur.com https://wikimedia.org https://*.icons8.com https://*.giphy.com https://picsum.photos https://images.unsplash.com; frame-src 'self' https://www.youtube.com https://trytako.com; child-src 'self'; manifest-src 'self'; worker-src 'self'; upgrade-insecure-requests; block-all-mixed-content;">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Apple Style Particle System 2025</title>
+    <style>
+        :root {
+            --glass-bg: rgba(20, 20, 20, 0.6);
+            --glass-border: rgba(255, 255, 255, 0.1);
+            --accent-gold: #F5E050;
+            --text-primary: rgba(255, 255, 255, 0.95);
+            --text-secondary: rgba(255, 255, 255, 0.5);
+            --ease-apple: cubic-bezier(0.25, 1, 0.5, 1);
+        }
+
+        body { 
+            margin: 0; 
+            overflow: hidden; 
+            background-color: #000000; 
+            font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, sans-serif;
+            -webkit-font-smoothing: antialiased;
+            user-select: none;
+        }
+
+        #canvas-container { width: 100vw; height: 100vh; position: absolute; z-index: 1; }
+
+        /* --- UI 容器 --- */
+        /* 添加 transition 以便整体淡入淡出 */
+        .ui-element {
+            transition: opacity 0.6s var(--ease-apple), transform 0.6s var(--ease-apple);
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        /* 隐藏状态的样式 */
+        body.ui-hidden .ui-element {
+            opacity: 0;
+            transform: translateY(-20px);
+            pointer-events: none;
+        }
+        
+        /* 特殊处理 lil-gui (它是外部库生成的，我们需要强制覆盖) */
+        body.ui-hidden .lil-gui {
+            opacity: 0 !important;
+            pointer-events: none !important;
+            transition: opacity 0.6s var(--ease-apple);
+        }
+
+        /* --- 显隐切换按钮 --- */
+        #toggle-ui-btn {
+            position: absolute;
+            top: 30px;
+            right: 30px;
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            z-index: 100; /* 最高层级，保证始终可点 */
+            transition: all 0.3s ease;
+        }
+        #toggle-ui-btn:hover { background: rgba(255, 255, 255, 0.2); transform: scale(1.05); }
+        #toggle-ui-btn svg { width: 20px; height: 20px; fill: currentColor; }
+
+        /* --- 左上角状态面板 --- */
+        #status-panel {
+            position: absolute;
+            top: 40px;
+            left: 40px;
+            padding: 24px;
+            background: var(--glass-bg);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid var(--glass-border);
+            border-radius: 24px;
+            width: 280px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.4);
+            z-index: 10;
+        }
+
+        h1 { margin: 0 0 8px 0; font-size: 20px; font-weight: 600; color: var(--text-primary); letter-spacing: -0.5px; }
+        p { margin: 0; font-size: 13px; color: var(--text-secondary); line-height: 1.5; }
+
+        #current-gesture {
+            display: inline-block;
+            margin-top: 12px;
+            font-size: 24px;
+            font-weight: 700;
+            background: linear-gradient(135deg, #fff, #a5a5a5);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        /* --- 摄像头预览 --- */
+        #video-wrapper {
+            position: absolute;
+            bottom: 40px;
+            right: 40px;
+            width: 180px;
+            height: 135px;
+            border-radius: 24px;
+            overflow: hidden;
+            background: #111;
+            border: 1px solid var(--glass-border);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            z-index: 10;
+            transform: scaleX(-1); /* 镜像 */
+            /* 针对 video wrapper 的隐藏位移方向不同 */
+            transition: opacity 0.6s var(--ease-apple), transform 0.6s var(--ease-apple);
+        }
+        
+        body.ui-hidden #video-wrapper {
+            transform: scaleX(-1) translateY(20px); /* 保持镜像同时向下位移 */
+        }
+
+        #input-video { width: 100%; height: 100%; object-fit: cover; opacity: 0.8; }
+
+        /* --- 加载动画 --- */
+        #loading {
+            position: absolute;
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 20;
+            text-align: center;
+            color: var(--text-secondary);
+            font-size: 14px;
+            font-weight: 500;
+            pointer-events: none;
+        }
+        .spinner {
+            width: 40px; height: 40px;
+            border: 3px solid rgba(255,255,255,0.1);
+            border-top-color: #fff;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 16px auto;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+    </style>
+    
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+                "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/",
+                "lil-gui": "https://unpkg.com/three@0.160.0/examples/jsm/libs/lil-gui.module.min.js"
+            }
+        }
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/control_utils/control_utils.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js" crossorigin="anonymous"></script>
+<script src="https://puc.poecdn.net/authenticated_preview_page/syncedState.3f7572448765332f3047.js"></script></head>
+<body>
+
+    <div id="loading">
+        <div class="spinner"></div>
+        <div>Initializing Neural Engine...</div>
+    </div>
+
+    <!-- 显隐切换按钮 -->
+    <div id="toggle-ui-btn" title="Toggle UI (Press 'H')">
+        <!-- Eye Icon SVG -->
+        <svg viewBox="0 0 24 24">
+            <path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"></path>
+        </svg>
+    </div>
+
+    <!-- UI 组：添加 ui-element 类 -->
+    <div id="status-panel" class="ui-element">
+        <h1>Particle Engine</h1>
+        <p>Gesture Control Active</p>
+        <div id="current-gesture">Ready</div>
+        <div style="margin-top: 20px; padding-top: 15px; border-top: 1px solid rgba(255,255,255,0.05);">
+            <p>✊ <strong>Fist</strong> &nbsp; New Year Mode</p>
+            <p>🖐 <strong>Palm</strong> &nbsp; Countdown</p>
+        </div>
+    </div>
+
+    <div id="video-wrapper" class="ui-element">
+        <video id="input-video"></video>
+    </div>
+
+    <div id="canvas-container"></div>
+
+    <script type="module">
+        import * as THREE from 'three';
+        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+        import GUI from 'lil-gui';
+
+        // --- UI 交互逻辑 ---
+        const toggleBtn = document.getElementById('toggle-ui-btn');
+        const body = document.body;
+        let isUiVisible = true;
+
+        function toggleUI() {
+            isUiVisible = !isUiVisible;
+            if (isUiVisible) {
+                body.classList.remove('ui-hidden');
+                // 切换图标为“睁眼”
+                toggleBtn.innerHTML = '<svg viewBox="0 0 24 24"><path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/></svg>';
+            } else {
+                body.classList.add('ui-hidden');
+                // 切换图标为“闭眼”
+                toggleBtn.innerHTML = '<svg viewBox="0 0 24 24"><path d="M12 7c2.76 0 5 2.24 5 5 0 .65-.13 1.26-.36 1.83l2.92 2.92c1.51-1.26 2.7-2.89 3.43-4.75-1.73-4.39-6-7.5-11-7.5-1.4 0-2.74.25-3.98.7l2.16 2.16C10.74 7.13 11.35 7 12 7zM2 4.27l2.28 2.28.46.46C3.08 8.3 1.78 10.02 1 12c1.73 4.39 6 7.5 11 7.5 1.55 0 3.03-.3 4.38-.84l.42.42L19.73 22 21 20.73 3.27 3 2 4.27zM7.53 9.8l1.55 1.55c-.05.21-.08.43-.08.65 0 1.66 1.34 3 3 3 .22 0 .44-.03.65-.08l1.55 1.55c-.67.33-1.41.53-2.2.53-2.76 0-5-2.24-5-5 0-.79.2-1.53.53-2.2zm4.31-.78l3.15 3.15.02-.16c0-1.66-1.34-3-3-3l-.17.01z"/></svg>';
+            }
+        }
+
+        toggleBtn.addEventListener('click', toggleUI);
+        
+        // 键盘快捷键 'H'
+        window.addEventListener('keydown', (e) => {
+            if(e.key.toLowerCase() === 'h') toggleUI();
+        });
+
+
+        // --- 高级配置 ---
+        const CONFIG = {
+            particleCount: 12000,
+            baseSize: 1.8,
+            sizeVariation: 1.5,
+            smoothness: 0.08,
+            scatterRadius: 150,
+            colorTech: '#e0e5ff',
+            colorGold: '#ffcc00',
+            colorRed: '#ff3333',
+            isNewYear: false
+        };
+
+        // --- 系统变量 ---
+        let scene, camera, renderer, particles;
+        let geometry, material;
+        let targetPositions = [];
+        let currentPositions = [];
+        let velocities = [];
+        let colors = [];
+        let particleExtras = [];
+        
+        let textPixelCount = 0;
+        let lastText = "";
+        let time = 0;
+        
+        const mouse = new THREE.Vector2(9999, 9999);
+
+        // --- 初始化 ---
+        function init() {
+            const container = document.getElementById('canvas-container');
+
+            scene = new THREE.Scene();
+            scene.fog = new THREE.FogExp2(0x000000, 0.008);
+
+            camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.1, 1000);
+            camera.position.set(0, 0, 60);
+
+            renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, powerPreference: "high-performance" });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+            container.appendChild(renderer.domElement);
+
+            const controls = new OrbitControls(camera, renderer.domElement);
+            controls.enableDamping = true;
+            controls.dampingFactor = 0.05;
+            controls.autoRotate = true;
+            controls.autoRotateSpeed = 0.2;
+            controls.enableZoom = false;
+
+            createParticles();
+            initGUI();
+            
+            updateText("HELLO\n2025");
+
+            window.addEventListener('resize', onResize);
+            document.addEventListener('mousemove', onMouseMove);
+            
+            animate();
+        }
+
+        // --- 粒子核心 ---
+        function createParticles() {
+            geometry = new THREE.BufferGeometry();
+            
+            const posArray = new Float32Array(CONFIG.particleCount * 3);
+            const colorArray = new Float32Array(CONFIG.particleCount * 3);
+            const sizeArray = new Float32Array(CONFIG.particleCount);
+
+            const techColor = new THREE.Color(CONFIG.colorTech);
+
+            for (let i = 0; i < CONFIG.particleCount; i++) {
+                const x = (Math.random() - 0.5) * CONFIG.scatterRadius * 2;
+                const y = (Math.random() - 0.5) * CONFIG.scatterRadius * 2;
+                const z = (Math.random() - 0.5) * CONFIG.scatterRadius;
+
+                posArray[i*3] = x;
+                posArray[i*3+1] = y;
+                posArray[i*3+2] = z;
+
+                currentPositions.push({x, y, z});
+                targetPositions.push({x, y, z});
+                velocities.push({x:0, y:0, z:0});
+                
+                colorArray[i*3] = techColor.r;
+                colorArray[i*3+1] = techColor.g;
+                colorArray[i*3+2] = techColor.b;
+
+                const baseS = Math.random();
+                sizeArray[i] = baseS;
+
+                particleExtras.push({
+                    baseSize: baseS,
+                    life: 0,
+                    maxLife: 0,
+                    isFirework: true,
+                    vx: 0, vy: 0, vz: 0
+                });
+            }
+
+            geometry.setAttribute('position', new THREE.BufferAttribute(posArray, 3));
+            geometry.setAttribute('color', new THREE.BufferAttribute(colorArray, 3));
+            geometry.setAttribute('size', new THREE.BufferAttribute(sizeArray, 1));
+
+            const texture = createSoftGlowTexture();
+
+            material = new THREE.PointsMaterial({
+                size: CONFIG.baseSize,
+                map: texture,
+                vertexColors: true,
+                blending: THREE.AdditiveBlending,
+                depthWrite: false,
+                transparent: true,
+                opacity: 0.85,
+                sizeAttenuation: true
+            });
+
+            particles = new THREE.Points(geometry, material);
+            scene.add(particles);
+        }
+
+        function createSoftGlowTexture() {
+            const canvas = document.createElement('canvas');
+            canvas.width = 128; canvas.height = 128;
+            const ctx = canvas.getContext('2d');
+            
+            const grad = ctx.createRadialGradient(64,64,0,64,64,64);
+            grad.addColorStop(0, 'rgba(255,255,255,1)');
+            grad.addColorStop(0.15, 'rgba(255,255,255,0.9)');
+            grad.addColorStop(0.4, 'rgba(255,255,255,0.2)');
+            grad.addColorStop(1, 'rgba(0,0,0,0)');
+            
+            ctx.fillStyle = grad;
+            ctx.fillRect(0,0,128,128);
+            
+            const tex = new THREE.Texture(canvas);
+            tex.needsUpdate = true;
+            return tex;
+        }
+
+        // --- 文字生成逻辑 ---
+        function updateText(text) {
+            if (text === lastText) return;
+            lastText = text;
+            CONFIG.isNewYear = text.includes("NEW YEAR");
+
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            
+            const width = 300; 
+            const height = 150;
+            canvas.width = width;
+            canvas.height = height;
+            
+            ctx.fillStyle = '#000';
+            ctx.fillRect(0, 0, width, height);
+            
+            const fontSize = text.length > 5 ? 40 : 100;
+            ctx.font = `900 ${fontSize}px -apple-system, BlinkMacSystemFont, "Arial"`;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillStyle = '#fff';
+            
+            if (text.includes('\n')) {
+                const lines = text.split('\n');
+                ctx.fillText(lines[0], width/2, height/2 - fontSize*0.6);
+                ctx.fillText(lines[1], width/2, height/2 + fontSize*0.6);
+            } else {
+                ctx.fillText(text, width/2, height/2);
+            }
+
+            const data = ctx.getImageData(0, 0, width, height).data;
+            const validPoints = [];
+            
+            const step = 2; 
+            for(let y=0; y<height; y+=step) {
+                for(let x=0; x<width; x+=step) {
+                    if(data[(y*width+x)*4] > 128) {
+                        validPoints.push({
+                            x: (x - width/2) * 0.5,
+                            y: -(y - height/2) * 0.5
+                        });
+                    }
+                }
+            }
+            
+            textPixelCount = validPoints.length;
+
+            for(let i=0; i<CONFIG.particleCount; i++) {
+                const extras = particleExtras[i];
+                
+                if(i < textPixelCount) {
+                    extras.isFirework = false;
+                    targetPositions[i] = {
+                        x: validPoints[i].x,
+                        y: validPoints[i].y,
+                        z: 0
+                    };
+                } else {
+                    extras.isFirework = true;
+                    if(!CONFIG.isNewYear) {
+                        targetPositions[i] = {
+                            x: (Math.random()-0.5) * CONFIG.scatterRadius,
+                            y: (Math.random()-0.5) * CONFIG.scatterRadius * 0.6,
+                            z: (Math.random()-0.5) * 40
+                        };
+                    }
+                }
+            }
+        }
+
+        // --- 动画循环 ---
+        function animate() {
+            requestAnimationFrame(animate);
+            time += 0.015;
+
+            const positions = geometry.attributes.position.array;
+            const colors = geometry.attributes.color.array;
+            
+            const cTech = new THREE.Color(CONFIG.colorTech);
+            const cGold = new THREE.Color(CONFIG.colorGold);
+            const cRed = new THREE.Color(CONFIG.colorRed);
+
+            for(let i=0; i<CONFIG.particleCount; i++) {
+                const idx = i*3;
+                const extras = particleExtras[i];
+                const current = currentPositions[i];
+                
+                if (!extras.isFirework) {
+                    const target = targetPositions[i];
+                    
+                    let breathing = 0;
+                    if(CONFIG.isNewYear) {
+                        breathing = Math.sin(time * 2 + current.x * 0.1) * 0.5;
+                    }
+
+                    let dx = mouse.x - current.x;
+                    let dy = mouse.y - current.y;
+                    let dist = Math.sqrt(dx*dx + dy*dy);
+                    let forceX = 0, forceY = 0;
+                    
+                    if(dist < 30) {
+                        const force = (30 - dist) / 30;
+                        forceX = -dx * force * 0.5;
+                        forceY = -dy * force * 0.5;
+                    }
+
+                    const tx = target.x + forceX;
+                    const ty = target.y + forceY + breathing;
+                    const tz = target.z;
+
+                    velocities[i].x += (tx - current.x) * CONFIG.smoothness;
+                    velocities[i].y += (ty - current.y) * CONFIG.smoothness;
+                    velocities[i].z += (tz - current.z) * CONFIG.smoothness;
+
+                    velocities[i].x *= 0.85; 
+                    velocities[i].y *= 0.85;
+                    velocities[i].z *= 0.85;
+
+                    current.x += velocities[i].x;
+                    current.y += velocities[i].y;
+                    current.z += velocities[i].z;
+
+                    let targetColor = CONFIG.isNewYear ? cGold : cTech;
+                    
+                    colors[idx] += (targetColor.r - colors[idx]) * 0.05;
+                    colors[idx+1] += (targetColor.g - colors[idx+1]) * 0.05;
+                    colors[idx+2] += (targetColor.b - colors[idx+2]) * 0.05;
+
+                } else {
+                    if (CONFIG.isNewYear) {
+                        if (extras.life <= 0) {
+                            extras.life = 1.5 + Math.random();
+                            current.x = (Math.random()-0.5) * 100;
+                            current.y = (Math.random()-0.5) * 60;
+                            current.z = (Math.random()-0.5) * 40;
+                            
+                            const theta = Math.random() * Math.PI * 2;
+                            const phi = Math.random() * Math.PI;
+                            const speed = 0.2 + Math.random() * 0.8;
+                            
+                            extras.vx = speed * Math.sin(phi) * Math.cos(theta);
+                            extras.vy = speed * Math.sin(phi) * Math.sin(theta);
+                            extras.vz = speed * Math.cos(phi);
+
+                            const isGold = Math.random() > 0.3;
+                            const fc = isGold ? cGold : cRed;
+                            colors[idx] = fc.r; colors[idx+1] = fc.g; colors[idx+2] = fc.b;
+                        }
+
+                        current.x += extras.vx;
+                        current.y += extras.vy;
+                        current.z += extras.vz;
+                        
+                        extras.vy -= 0.015; 
+                        extras.vx *= 0.98;
+                        extras.vy *= 0.98;
+                        extras.vz *= 0.98;
+                        
+                        extras.life -= 0.02;
+                        
+                        if(extras.life < 0.5) {
+                            colors[idx] *= 0.9;
+                            colors[idx+1] *= 0.9;
+                            colors[idx+2] *= 0.9;
+                        }
+
+                    } else {
+                        const target = targetPositions[i];
+                        current.x += (target.x - current.x) * 0.01;
+                        current.y += (target.y - current.y) * 0.01;
+                        current.z += (target.z - current.z) * 0.01;
+                        
+                        current.y += Math.sin(time * 0.3 + i) * 0.02;
+                        
+                        colors[idx] += (cTech.r * 0.3 - colors[idx]) * 0.05;
+                        colors[idx+1] += (cTech.g * 0.3 - colors[idx+1]) * 0.05;
+                        colors[idx+2] += (cTech.b * 0.3 - colors[idx+2]) * 0.05;
+                    }
+                }
+
+                positions[idx] = current.x;
+                positions[idx+1] = current.y;
+                positions[idx+2] = current.z;
+            }
+
+            geometry.attributes.position.needsUpdate = true;
+            geometry.attributes.color.needsUpdate = true;
+
+            renderer.render(scene, camera);
+        }
+
+        function onMouseMove(event) {
+            mouse.x = (event.clientX / window.innerWidth) * 200 - 100;
+            mouse.y = -(event.clientY / window.innerHeight) * 100 + 50;
+        }
+
+        function onResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+
+        function initGUI() {
+            const gui = new GUI({ title: 'Settings' });
+            // GUI 默认会插入到 body，我们不需要手动设置位置，但需要确保它能被 CSS 隐藏
+            gui.domElement.classList.add('ui-element'); 
+            // 为了避免与右上角按钮重叠，稍微往下移一点
+            gui.domElement.style.top = '80px'; 
+            
+            const f1 = gui.addFolder('Appearance');
+            f1.add(CONFIG, 'baseSize', 0.5, 5.0).name('Particle Size').onChange(v => material.size = v);
+            f1.add(material, 'opacity', 0.1, 1.0).name('Brightness');
+            
+            const f2 = gui.addFolder('Physics');
+            f2.add(CONFIG, 'smoothness', 0.01, 0.3).name('Responsiveness');
+            
+            const f3 = gui.addFolder('Colors');
+            f3.addColor(CONFIG, 'colorTech').name('Tech Color');
+            f3.addColor(CONFIG, 'colorGold').name('New Year Gold');
+        }
+
+        // --- 视觉识别 ---
+        function initComputerVision() {
+            const videoElement = document.getElementById('input-video');
+            const gestureDisplay = document.getElementById('current-gesture');
+
+            const hands = new Hands({locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`});
+            
+            hands.setOptions({
+                maxNumHands: 1,
+                modelComplexity: 1,
+                minDetectionConfidence: 0.6,
+                minTrackingConfidence: 0.5
+            });
+
+            hands.onResults(results => {
+                if (results.multiHandLandmarks && results.multiHandLandmarks.length > 0) {
+                    const landmarks = results.multiHandLandmarks[0];
+                    const gesture = analyzeGesture(landmarks);
+                    
+                    gestureDisplay.innerText = gesture.name;
+                    
+                    if (gesture.isNewYear) {
+                        gestureDisplay.style.background = "linear-gradient(135deg, #ffd700, #ffaa00)";
+                        gestureDisplay.style.webkitBackgroundClip = "text";
+                    } else {
+                        gestureDisplay.style.background = "linear-gradient(135deg, #fff, #a5a5a5)";
+                        gestureDisplay.style.webkitBackgroundClip = "text";
+                    }
+
+                    updateText(gesture.text);
+                }
+            });
+
+            const cameraUtils = new Camera(videoElement, {
+                onFrame: async () => await hands.send({image: videoElement}),
+                width: 320,
+                height: 240
+            });
+            
+            cameraUtils.start()
+                .then(() => document.getElementById('loading').style.display = 'none')
+                .catch(e => console.error(e));
+        }
+
+        function analyzeGesture(landmarks) {
+            const fingers = [8, 12, 16, 20];
+            const pips = [6, 10, 14, 18];
+            const wrist = landmarks[0];
+            
+            let extendedCount = 0;
+            for (let i = 0; i < 4; i++) {
+                if (dist(landmarks[fingers[i]], wrist) > dist(landmarks[pips[i]], wrist) + 0.03) {
+                    extendedCount++;
+                }
+            }
+
+            const thumbTip = landmarks[4];
+            const pinkyMcp = landmarks[17];
+            const thumbMcp = landmarks[2];
+            let thumbExtended = dist(thumbTip, pinkyMcp) > dist(thumbMcp, pinkyMcp) + 0.03;
+
+            const count = extendedCount + (thumbExtended ? 1 : 0);
+
+            if (thumbExtended && extendedCount === 0) 
+                return { name: "Thumbs Up", text: "2025\nREADY", isNewYear: false };
+            
+            if (count === 0) 
+                return { name: "Happy New Year", text: "HAPPY\nNEW YEAR", isNewYear: true };
+            
+            if (count === 5) return { name: "Countdown: 5", text: "5", isNewYear: false };
+            if (count === 4) return { name: "Countdown: 4", text: "4", isNewYear: false };
+            if (count === 3) return { name: "Countdown: 3", text: "3", isNewYear: false };
+            if (count === 2) return { name: "Countdown: 2", text: "2", isNewYear: false };
+            if (count === 1) return { name: "Countdown: 1", text: "1", isNewYear: false };
+
+            return { name: "Detecting...", text: "...", isNewYear: false };
+        }
+
+        function dist(p1, p2) {
+            return Math.sqrt(Math.pow(p1.x - p2.x, 2) + Math.pow(p1.y - p2.y, 2));
+        }
+
+        init();
+        initComputerVision();
+
+    </script>
+
+
+</body></html>
